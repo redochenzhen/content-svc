@@ -1,41 +1,54 @@
 {
-  "name": "",
-  "author": "",
-  "group": "",
-  "projects": [],
+  "name": "content-svc",
+  "author": "kede",
+  "group": "technology-platform",
+  "projects": [
+    {
+      "id": "content-svc-api",
+      "path": "./src/ContentSvc.WebApi"
+    }
+  ],
+  "solution": {
+    "path": "./ContentSvc.sln",
+    "release": true,
+    "toolType": "dotnet",
+    "projectIds": [
+      "content-svc-api"
+    ]
+  },
   "notice": {
     "dingTalk": {
-      "accessToken": "",
+      "accessToken": "f427165f27444e27975ade327bc89e1a5193236ed9c7c9a845da55bd8080f0d2",
       "ats": {
-        "Development": [],
-        "Staging": []
+        "Development": [
+          "18516532013"
+        ],
+        "Staging": [
+          "18516532013",
+          // "13601862249"
+        ]
       }
     }
   },
   "qa": {
-    "unitTest": {
-      "testProjects": [
-        {
-          "id": "",
-          "path": "",
-          "release": true,
-          "toolType": "",
-          "testTool": ""
-        }
-      ]
-    },
-    "sonar": {
-      "toolType": "",
-      "rootPath": "",
-      "exclusions": [],
-      "r#": {
-        "exclusions": []
-      }
-    }
+    "enable": false
   },
   "targets": {
     "Development": {},
-    "Staging": {},
+    "Staging": {
+      "content-svc-api": [
+        {
+          "os": "centos",
+          "credentialId": "8f085947-2db5-4c6b-8046-eff7d8d5ce13",
+          "hosts": [
+            "stg02-c.corp.kede.net"
+          ],
+          "urls": [
+            "http://stg02-c.corp.kede.net:7073"
+          ]
+        }
+      ]
+    },
     "PreProduction": {},
     "Production": {}
   },

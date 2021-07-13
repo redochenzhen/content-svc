@@ -1,14 +1,36 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Deployment>
   <!--你所在的小组，可能是BusinessPlatform, Project-Kede等等-->
-  <Group></Group>
+  <Group>technology-platform</Group>
   <!--备份保存数量，可选，默认是10-->
   <Keep>10</Keep>
   <Services>
-
+    <Service id="content-svc-api" type="WebApplication">
+      <Name>content-svc-api</Name>
+      <Entry>ContentSvc.WebApi</Entry>
+      <!--Settings用于定制化配置，可以删除不需要的项-->
+      <Settings>
+        <!--全环境默认配置-->
+        <Setting env="*">
+          <!-- <nginx>
+          </nginx> -->
+          <bindings>
+            <binding>
+              <protocol>http</protocol>
+              <bindingInformation>*:7073:</bindingInformation>
+            </binding>
+          </bindings>
+        </Setting>
+      </Settings>
+    </Service>
   </Services>
   <!--某个环境下个项目共用的配置-->
   <Settings>
-
+    <!--全环境默认配置-->
+    <Setting env="*">
+      <poolSettings>
+        <set name="ManagedRuntimeVersion" value="" />
+      </poolSettings>
+    </Setting>
   </Settings>
 </Deployment>

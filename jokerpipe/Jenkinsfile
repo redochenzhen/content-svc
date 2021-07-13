@@ -1,16 +1,20 @@
 //使用合适的jokerpipe版本
-@Library('jokerpipe@[_]') _
+@Library('jokerpipe@v1.7.x') _
 def switcher
 
 pipeline {
   agent {
     node {
-      label 'in && windows && msbuild && dotnetcore && gitversion'
+      label 'in && centos && dotnetcore'
     }
   }
   
   triggers { 
     pollSCM (
+      env.BRANCH_NAME == 'production' ? '' :
+      //PreProduction环境：每周六的2点~3点的某个时间自动构建
+      env.BRANCH_NAME == 'pre-production' ? 'H 2 * * 6' :
+      //Staging环境：每个工作日的凌晨2点~3点的某个时间自动构建
       env.BRANCH_NAME == 'master' ? 'H 2 * * 1-5' : ''
     )
   }
@@ -118,7 +122,7 @@ pipeline {
         success {
           script {
             dingTalk.succeed (
-              message: 'Successfully pushed.'
+              message: 'Successfully deployed.'
             )
           }
         }
@@ -126,7 +130,7 @@ pipeline {
         failure {
           script {
             dingTalk.fail (
-              message: 'Failed in pushing.'
+              message: 'Deployment is failed.'
             )
           }
         }
