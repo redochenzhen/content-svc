@@ -88,6 +88,11 @@ namespace ContentSvc
                         .AllowCredentials());
             });
 
+            services.AddDiscovery(options=>
+            {
+                options.UseZooPicker();
+            });
+
             services.AddCustomServices();
         }
 
