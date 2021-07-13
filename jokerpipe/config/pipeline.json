@@ -1,0 +1,49 @@
+{
+  "name": "",
+  "author": "",
+  "group": "",
+  "projects": [],
+  "notice": {
+    "dingTalk": {
+      "accessToken": "",
+      "ats": {
+        "Development": [],
+        "Staging": []
+      }
+    }
+  },
+  "qa": {
+    "unitTest": {
+      "testProjects": [
+        {
+          "id": "",
+          "path": "",
+          "release": true,
+          "toolType": "",
+          "testTool": ""
+        }
+      ]
+    },
+    "sonar": {
+      "toolType": "",
+      "rootPath": "",
+      "exclusions": [],
+      "r#": {
+        "exclusions": []
+      }
+    }
+  },
+  "targets": {
+    "Development": {},
+    "Staging": {},
+    "PreProduction": {},
+    "Production": {}
+  },
+  "switch": {
+    "restore": true,
+    "build": true,
+    "QA": "auto",
+    "publish": "auto",
+    "deploy": "auto"
+  }
+}
