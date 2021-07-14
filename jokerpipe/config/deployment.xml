@@ -7,7 +7,7 @@
   <Services>
     <Service id="content-svc-api" type="WebApplication">
       <Name>content-svc-api</Name>
-      <Entry>ContentSvc.WebApi</Entry>
+      <Entry>ContentSvc.WebApi.dll</Entry>
       <!--Settings用于定制化配置，可以删除不需要的项-->
       <Settings>
         <!--全环境默认配置-->

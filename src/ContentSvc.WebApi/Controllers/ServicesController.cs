@@ -1,19 +1,20 @@
 ﻿using ContentSvc.Model.Dto;
 using ContentSvc.Model.Mapping;
 using ContentSvc.WebApi.Context;
+using ContentSvc.WebApi.Minio;
 using ContentSvc.WebApi.Repositries.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Threading.Tasks;
-using ContentSvc.WebApi.Minio;
-using System.Text.Json;
 using System.Diagnostics;
-using Microsoft.Extensions.Options;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace ContentSvc.WebApi.Controllers
 {
@@ -149,15 +150,17 @@ namespace ContentSvc.WebApi.Controllers
             var opt = _minioOptions;
             string minio = "mc_minio";
             var uri = opt.Secure ? $"https://{opt.Endpoint}" : $"http://{opt.Endpoint}";
-            RunProcess(@".\mc.exe", $"alias set {minio} {new Uri(uri)} {opt.AdminAccessKey} {opt.AdminSecretKey}");
+            
+            string mc = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @".\mc.exe" : "./mc";
+            RunProcess(mc, $"alias set {minio} {new Uri(uri)} {opt.AdminAccessKey} {opt.AdminSecretKey}");
 
-            RunProcess(@".\mc.exe", $"mb {minio}/{accessKey}/public");
+            RunProcess(mc, $"mb {minio}/{accessKey}/public");
 
-            RunProcess(@".\mc.exe", $"admin policy add {minio} {policyName} {policyFileName}");
-            RunProcess(@".\mc.exe", $"admin user add {minio} {accessKey} {secretKey}");
-            RunProcess(@".\mc.exe", $"admin policy set {minio} {policyName} user={accessKey}");
+            RunProcess(mc, $"admin policy add {minio} {policyName} {policyFileName}");
+            RunProcess(mc, $"admin user add {minio} {accessKey} {secretKey}");
+            RunProcess(mc, $"admin policy set {minio} {policyName} user={accessKey}");
 
-            RunProcess(@".\mc.exe", $"policy set download {minio}/{accessKey}/public");
+            RunProcess(mc, $"policy set download {minio}/{accessKey}/public");
         }
 
         static private int RunProcess(string fileName, string appParam)
