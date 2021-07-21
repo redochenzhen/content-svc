@@ -143,7 +143,7 @@ namespace ContentSvc.WebApi.Controllers
                 }
             };
 
-            string policyName = "cs_public_policy";
+            string policyName = $"{accessKey}_usr";
             string policyFileName = $"{policyName}.json";
             string json = JsonSerializer.Serialize(policy, new JsonSerializerOptions { WriteIndented = true });
             System.IO.File.WriteAllText(policyFileName, json);

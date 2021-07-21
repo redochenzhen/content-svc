@@ -34,3 +34,6 @@ msbuild.wrn
 
 **/TestResults/
 **/*.log
+
+**/*_usr.json
+

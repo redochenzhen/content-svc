@@ -1,8 +1,19 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
+    <UserSecretsId>3cf95352-5680-48d9-8263-8e64e7b5b73a</UserSecretsId>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="run.bash" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="run.bash">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="EFCore.NamingConventions" Version="1.1.1" />
