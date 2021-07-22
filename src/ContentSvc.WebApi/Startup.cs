@@ -1,5 +1,5 @@
 using ContentSvc.WebApi.Context;
-using ContentSvc.WebApi.Minio;
+using ContentSvc.WebApi.Options;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;

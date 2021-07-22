@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace ContentSvc.WebApi.Minio
+namespace ContentSvc.Model.Minio
 {
     public class Policy
     {
@@ -38,14 +38,4 @@ namespace ContentSvc.WebApi.Minio
             }
         }
     }
-
-    public class Statement
-    {
-        public string Effect { get; set; }
-
-        public List<string> Action { get; set; }
-
-        public List<string> Resource { get; set; }
-    }
-
 }

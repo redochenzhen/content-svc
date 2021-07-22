@@ -1,4 +1,4 @@
-﻿using ContentSvc.WebApi.Minio;
+﻿using ContentSvc.WebApi.Options;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;

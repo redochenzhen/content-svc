@@ -11,5 +11,9 @@ namespace ContentSvc.Model.Dto
         public DateTime CreatedDate { get; set; }
         public int CreatorId { get; set; }
         public List<MinioUser> MinioUsers { get; set; }
+
+        public string PublicBaseUrl { get; set; }
+        public string ConsoleUrl { get; set; }
+        public string ApiBaseUrl { get; set; }
     }
 }

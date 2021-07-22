@@ -29,7 +29,8 @@ namespace ContentSvc.WebApi.Context
             modelBuilder.Entity<MinioUser>()
             .HasOne(u => u.Service)
             .WithMany(s => s.MinioUsers)
-            .HasForeignKey(u => u.ServiceId);
+            .HasForeignKey(u => u.ServiceId)
+            .OnDelete(DeleteBehavior.Cascade);
         }
 
         public DbSet<Service> Services { get; set; }

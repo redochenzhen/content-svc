@@ -1,19 +1,17 @@
 ﻿using ContentSvc.Model.Dto;
 using ContentSvc.Model.Mapping;
 using ContentSvc.WebApi.Context;
-using ContentSvc.WebApi.Minio;
+using ContentSvc.WebApi.Options;
 using ContentSvc.WebApi.Repositries.Interfaces;
+using ContentSvc.WebApi.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace ContentSvc.WebApi.Controllers
@@ -25,18 +23,21 @@ namespace ContentSvc.WebApi.Controllers
         private readonly ContentSvcContext _context;
         private readonly IServiceRepository _serviceRepository;
         private readonly IMinioUserRepository _minioUserRepository;
-        private readonly MinioOptions _minioOptions;
+        private readonly MinioOptions _options;
+        private readonly IMcWrapper _mc;
 
         public ServicesController(
             IOptions<MinioOptions> minioOptions,
             ContentSvcContext context,
             IServiceRepository serviceRepository,
-            IMinioUserRepository minioUserRepository)
+            IMinioUserRepository minioUserRepository,
+            IMcWrapper mc)
         {
-            _minioOptions = minioOptions.Value;
+            _options = minioOptions.Value;
             _context = context;
             _serviceRepository = serviceRepository;
             _minioUserRepository = minioUserRepository;
+            _mc = mc;
         }
 
         [HttpPost]
@@ -53,9 +54,16 @@ namespace ContentSvc.WebApi.Controllers
                 AccessKey = service.Name,
                 SecretKey = GenerateSecretKey(),
             };
-
             var minioUser = minioUserDto.ToEntiry();
-            CreateMinioBucketAndUser(minioUser.AccessKey, minioUserDto.SecretKey);
+            string accessKey = minioUser.AccessKey;
+            string secretKey = minioUser.SecretKey;
+            string bucket = accessKey;
+            _mc.SetAlias();
+            _mc.MakePublicBucket(bucket);
+            string policy = _mc.AddBucketPolicy(bucket);
+            _mc.AddUser(accessKey, secretKey);
+            _mc.SetPolicy(policy, accessKey);
+            _mc.SetPublicDownload(bucket);
 
             using (var trans = await _context.Database.BeginTransactionAsync())
             {
@@ -77,6 +85,9 @@ namespace ContentSvc.WebApi.Controllers
             }
             serviceDto.Id = service.Id;
             serviceDto.MinioUsers = new List<MinioUser> { minioUserDto };
+            serviceDto.PublicBaseUrl = _options.PublicBaseUrl;
+            serviceDto.ConsoleUrl = _options.ConsoleUrl;
+            serviceDto.ApiBaseUrl = _options.ApiBaseUrl;
             return Created(new Uri($"/api/services/{service.Id}", UriKind.Relative), serviceDto);
         }
 
@@ -86,16 +97,44 @@ namespace ContentSvc.WebApi.Controllers
             var services = await _context.Services
             .Include(s => s.MinioUsers)
             .ToListAsync();
-            var serviceDtos = services.Select(svc => svc.ToDto()).ToList();
+            var serviceDtos = services
+                .Select(svc =>
+                {
+                    var dto = svc.ToDto();
+                    dto.PublicBaseUrl = _options.PublicBaseUrl;
+                    dto.ConsoleUrl = _options.ConsoleUrl;
+                    dto.ApiBaseUrl = _options.ApiBaseUrl;
+                    return dto;
+                })
+                .ToList();
             return Ok(serviceDtos);
         }
 
-        [HttpGet("{id}")]
-        [ProducesResponseType(typeof(Service), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetServiceDetailAsync(int id)
+        //[HttpGet("{id}")]
+        //[ProducesResponseType(typeof(Service), StatusCodes.Status200OK)]
+        //[ProducesResponseType(StatusCodes.Status404NotFound)]
+        //public async Task<IActionResult> GetServiceDetailAsync(int id)
+        //{
+        //    throw new NotImplementedException();
+        //}
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> RemoveServiceAsync(int id)
         {
-            throw new NotImplementedException();
+
+            var service = await _serviceRepository.GetAsync(id);
+            if (service != null)
+            {
+                _serviceRepository.Remove(service);
+                await _context.SaveChangesAsync();
+                string accessKey = service.Name;
+                string bucket = accessKey;
+                _mc.RemoveBucketPolicy(bucket);
+                _mc.RemoveUser(accessKey);
+                _mc.ForceRemoveBucket(bucket);
+            }
+
+            return Ok();
         }
 
         private string GenerateSecretKey()
@@ -106,97 +145,6 @@ namespace ContentSvc.WebApi.Controllers
                 rng.GetBytes(randomNumber);
                 return Convert.ToBase64String(randomNumber);
             }
-        }
-
-        private void CreateMinioBucketAndUser(string accessKey, string secretKey)
-        {
-            var policy = new Policy
-            {
-                Statement = new List<Statement>
-                {
-                    new Statement
-                    {
-                        Effect = Policy.Effect.ALLOW,
-                        Action = new List<string>
-                        {
-                            Policy.Action.LIST_BUCKET,
-                            Policy.Action.GET_BUCKET_LOCATION
-                        },
-                        Resource = new List<string>
-                        {
-                            Policy.Resource.Bucket(accessKey)
-                        }
-                    },
-                    new Statement
-                    {
-                        Effect = Policy.Effect.ALLOW,
-                        Action = new List<string>
-                        {
-                            Policy.Action.GET_OBJECT,
-                            Policy.Action.PUT_OBJECT
-                        },
-                        Resource = new List<string>
-                        {
-                            Policy.Resource.Public(accessKey)
-                        }
-                    }
-                }
-            };
-
-            string policyName = $"{accessKey}_usr";
-            string policyFileName = $"{policyName}.json";
-            string json = JsonSerializer.Serialize(policy, new JsonSerializerOptions { WriteIndented = true });
-            System.IO.File.WriteAllText(policyFileName, json);
-            var opt = _minioOptions;
-            string minio = "mc_minio";
-            var uri = opt.Secure ? $"https://{opt.Endpoint}" : $"http://{opt.Endpoint}";
-            
-            string mc = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @".\mc.exe" : "./mc";
-            RunProcess(mc, $"alias set {minio} {new Uri(uri)} {opt.AdminAccessKey} {opt.AdminSecretKey}");
-
-            RunProcess(mc, $"mb {minio}/{accessKey}/public");
-
-            RunProcess(mc, $"admin policy add {minio} {policyName} {policyFileName}");
-            RunProcess(mc, $"admin user add {minio} {accessKey} {secretKey}");
-            RunProcess(mc, $"admin policy set {minio} {policyName} user={accessKey}");
-
-            RunProcess(mc, $"policy set download {minio}/{accessKey}/public");
-        }
-
-        static private int RunProcess(string fileName, string appParam)
-        {
-            using (var process = new Process())
-            {
-                process.StartInfo = new ProcessStartInfo(fileName, appParam)
-                {
-                    CreateNoWindow = true,
-                    WindowStyle = ProcessWindowStyle.Hidden,
-                    RedirectStandardError = true,
-                    RedirectStandardOutput = true
-                };
-
-                process.Start();
-
-                //while (!process.StandardOutput.EndOfStream)
-                //{
-                //    string line = process.StandardOutput.ReadLine();
-                //    Console.WriteLine(line);
-                //}
-
-                //while (!process.StandardError.EndOfStream)
-                //{
-                //    string line = process.StandardError.ReadLine();
-                //    Console.WriteLine(line);
-                //}
-
-                while (!process.HasExited)
-                {
-                    process.WaitForExit();
-                }
-
-                if (process.ExitCode == 0) return 0;
-            }
-            throw new Exception();
         }
     }
 }
