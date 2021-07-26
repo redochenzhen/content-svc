@@ -1,4 +1,5 @@
 ﻿using ContentSvc.WebApi.Options;
+using ImageMagick;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -14,11 +15,11 @@ namespace ContentSvc.WebApi.Controllers
     [ApiController]
     public class ImagesController : ControllerBase
     {
-        private readonly MinioOptions _minioOptions;
+        private readonly MinioOptions _options;
 
         public ImagesController(IOptions<MinioOptions> minioOptions)
         {
-            _minioOptions = minioOptions.Value;
+            _options = minioOptions.Value;
         }
 
         [HttpPost("upload")]
@@ -35,30 +36,22 @@ namespace ContentSvc.WebApi.Controllers
             }
 
             var contentType = file.ContentType;
-            var bucketName = accessKey;
+            var bucket = accessKey;
             var filePath = Path.Join(path, file.FileName).Replace("\\", "/");
 
             try
             {
-                var opt = _minioOptions;
-                var minio = new MinioClient(opt.Endpoint, accessKey, secretKey);
-                //var minio = new MinioClient(endpoint, accessKey, secretKey);
-                //bool exists = await minio.BucketExistsAsync(bucketName);
-                //if (!exists)
-                //{
-                //    return NotFound();
-                //    //await minio.MakeBucketAsync(bucketName);
-                //}
+                var minio = new MinioClient(_options.Endpoint, accessKey, secretKey);
                 using (var stream = file.OpenReadStream())
                 {
-                    await minio.PutObjectAsync(bucketName, filePath, stream, file.Length, contentType);
+                    await minio.PutObjectAsync(bucket, filePath, stream, file.Length, contentType);
                 }
             }
             catch (MinioException ex)
             {
                 throw ex;
             }
-            var fullPath = Path.Join(bucketName, filePath).Replace("\\", "/");
+            var fullPath = Path.Join(bucket, filePath).Replace("\\", "/");
             return Created(new Uri(fullPath, UriKind.Relative), null);
         }
     }

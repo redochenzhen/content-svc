@@ -14,8 +14,7 @@ namespace ContentSvc.WebApi.Services
 {
     public class McWrapper : IMcWrapper
     {
-        private static string MC =>
-            RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @".\mc.exe" : "./mc";
+        private readonly static string MC = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? @".\mc.exe" : "./mc";
         private readonly ILogger _logger;
         private readonly MinioOptions _options;
 

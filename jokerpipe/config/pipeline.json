@@ -49,8 +49,20 @@
         }
       ]
     },
-    "PreProduction": {},
-    "Production": {}
+    "Production": {
+      "content-svc-api": [
+        {
+          "os": "centos",
+          "credentialId": "8f085947-2db5-4c6b-8046-eff7d8d5ce13",
+          "hosts": [
+            "prod01-c.corp.kede.net"
+          ],
+          "urls": [
+            "http://prod01-c.corp.kede.net:7073"
+          ]
+        }
+      ]
+    }
   },
   "switch": {
     "restore": true,
