@@ -88,9 +88,18 @@ namespace ContentSvc
                         .AllowCredentials());
             });
 
-            services.AddDiscovery(options=>
+#if !DEBUG
+            services.AddDiscovery(options =>
             {
                 options.UseZooPicker();
+            });
+#endif
+            var minio = Configuration.GetSection(MinioOptions.PREFIX).Get<MinioOptions>();
+            services.AddHttpClient("minio", client =>
+            {
+                client.BaseAddress = minio.Secure ?
+                    new Uri($"https://{minio.Endpoint}/") :
+                    new Uri($"http://{minio.Endpoint}/");
             });
 
             services.AddCustomServices();
