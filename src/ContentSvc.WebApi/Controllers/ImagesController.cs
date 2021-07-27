@@ -127,7 +127,7 @@ namespace ContentSvc.WebApi.Controllers
                             new Drawables()
                             .FillColor(MagickColors.Gray)
                             .FontPointSize(height)
-                            .Text(width >> 1, height * 0.85, text)
+                            .Text(width >> 1, height * 0.9, text)
                             .TextAlignment(TextAlignment.Center));
                         textImage.Evaluate(Channels.Opacity, EvaluateOperator.Multiply, opacity);
                          if (x < 0) x += (image.Width - textImage.Width);
