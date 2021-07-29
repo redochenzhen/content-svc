@@ -33,6 +33,8 @@ namespace ContentSvc
                 options.UseMySql(Configuration.GetConnectionString("DefaultConnection"));
             });
 
+            services.AddResponseCaching();
+
             services.AddControllers();
 
             services.AddSwaggerGen(config =>

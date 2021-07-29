@@ -1,15 +1,12 @@
-﻿using ContentSvc.WebApi.Options;
+﻿using ContentSvc.WebApi.ActionFilters;
+using ContentSvc.WebApi.Options;
 using ImageMagick;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Minio;
-using Minio.Exceptions;
 using System;
 using System.IO;
 using System.Net.Http;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace ContentSvc.WebApi.Controllers
@@ -32,69 +29,72 @@ namespace ContentSvc.WebApi.Controllers
             _clientFactory = clientFactory;
         }
 
-        [HttpPost("upload")]
-        public async Task<IActionResult> UploadAsync(IFormFile file, string path, string accessKey, string secretKey)
-        {
-            if (file == null) return BadRequest();
-            if (path == null) return BadRequest();
-            if (accessKey == null) return BadRequest();
-            if (secretKey == null) return BadRequest();
+        // [HttpPost("upload")]
+        // public async Task<IActionResult> UploadAsync(IFormFile file, string path)
+        // {
+        //     if (file == null) return BadRequest();
+        //     if (path == null) return BadRequest();
+        //     if (accessKey == null) return BadRequest();
+        //     if (secretKey == null) return BadRequest();
 
-            if (!file.ContentType.ToLower().StartsWith("image"))
-            {
-                return new UnsupportedMediaTypeResult();
-            }
+        //     if (!file.ContentType.ToLower().StartsWith("image"))
+        //     {
+        //         return new UnsupportedMediaTypeResult();
+        //     }
 
-            var contentType = file.ContentType;
-            var bucket = accessKey;
-            var filePath = Path.Join(path, file.FileName).Replace("\\", "/");
+        //     var contentType = file.ContentType;
+        //     var bucket = accessKey;
+        //     var filePath = Path.Join(path, file.FileName).Replace("\\", "/");
 
-            try
-            {
-                var minio = new MinioClient(_options.Endpoint);
-                using (var stream = file.OpenReadStream())
-                {
-                    await minio.PutObjectAsync(bucket, filePath, stream, file.Length, contentType);
-                }
-            }
-            catch (MinioException ex)
-            {
-                throw ex;
-            }
-            var fullPath = Path.Join(bucket, filePath).Replace("\\", "/");
-            return Created(new Uri(fullPath, UriKind.Relative), null);
-        }
+        //     try
+        //     {
+        //         var minio = new MinioClient(_options.Endpoint);
+        //         using (var stream = file.OpenReadStream())
+        //         {
+        //             await minio.PutObjectAsync(bucket, filePath, stream, file.Length, contentType);
+        //         }
+        //     }
+        //     catch (MinioException ex)
+        //     {
+        //         throw ex;
+        //     }
+        //     var fullPath = Path.Join(bucket, filePath).Replace("\\", "/");
+        //     return Created(new Uri(fullPath, UriKind.Relative), null);
+        // }
 
+        [FilesETagFilter("targetPath", "iconPath")]
+        [ResponseCache(Duration = 30)]
         [HttpGet("watermark")]
-        public async Task<IActionResult> GetWithWatermark(
-            [FromQuery(Name = "image")] string imagePath,
-            [FromQuery(Name = "mark")] string watermarkPath,
+        public async Task<IActionResult> GetWithWatermarkAsync(
+            [FromQuery(Name = "target")] string targetPath,
+            [FromQuery(Name = "icon")] string iconPath,
             string text,
             [FromQuery(Name = "w")] int width,
             [FromQuery(Name = "h")] int height,
             int x,
             int y,
+            [FromQuery(Name = "fs")] int fontSize,
             double opacity = 1)
         {
-
-            if (imagePath == null) return BadRequest();
+            if (targetPath == null) return BadRequest();
             if (width < 0) return BadRequest();
             if (height < 0) return BadRequest();
+            if (fontSize < 0) return BadRequest();
             if (opacity < 0) return BadRequest();
 
             var client = _clientFactory.CreateClient("minio");
-            var response = await client.GetAsync(imagePath);
+            var response = await client.GetAsync(targetPath);
             if (!response.IsSuccessStatusCode)
             {
                 return StatusCode((int)response.StatusCode);
             }
-            var imageStream = await response.Content.ReadAsStreamAsync();
-            var maskStream = default(Stream);
-            if (!string.IsNullOrEmpty(watermarkPath))
+            var targetStream = await response.Content.ReadAsStreamAsync();
+            var iconStream = default(Stream);
+            if (!string.IsNullOrEmpty(iconPath))
             {
                 try
                 {
-                    maskStream = await client.GetStreamAsync(watermarkPath);
+                    iconStream = await client.GetStreamAsync(iconPath);
                 }
                 catch (Exception ex)
                 {
@@ -102,11 +102,11 @@ namespace ContentSvc.WebApi.Controllers
                 }
             }
 
-            using (var image = new MagickImage(imageStream))
+            using (var image = new MagickImage(targetStream))
             {
-                if (maskStream != null)
+                if (iconStream != null)
                 {
-                    using (var markImage = new MagickImage(maskStream))
+                    using (var markImage = new MagickImage(iconStream))
                     {
                         if (!markImage.HasAlpha)
                         {
@@ -121,21 +121,23 @@ namespace ContentSvc.WebApi.Controllers
                 }
                 else if (text != null && width > 0 && height > 0)
                 {
+                    if (fontSize == 0) fontSize = height;
                     using (var textImage = new MagickImage(MagickColors.White, width, height))
                     {
                         textImage.Draw(
                             new Drawables()
                             .FillColor(MagickColors.Gray)
-                            .FontPointSize(height)
-                            .Text(width >> 1, height * 0.9, text)
+                            .FontPointSize(fontSize)
+                            .Text(width >> 1, (height + (int)(fontSize * 0.9)) >> 1, text)
                             .TextAlignment(TextAlignment.Center));
                         textImage.Evaluate(Channels.Opacity, EvaluateOperator.Multiply, opacity);
-                         if (x < 0) x += (image.Width - textImage.Width);
+                        if (x < 0) x += (image.Width - textImage.Width);
                         if (y < 0) y += (image.Height - textImage.Height);
                         image.Composite(textImage, x, y, CompositeOperator.Over);
                     }
                 }
-                return File(image.ToByteArray(), response.Content.Headers.ContentType.MediaType);
+                var type = response.Content.Headers.ContentType.MediaType;
+                return File(image.ToByteArray(), type);
             }
         }
     }
