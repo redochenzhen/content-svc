@@ -1,4 +1,5 @@
 ﻿using ContentSvc.WebApi.ActionFilters;
+using ContentSvc.WebApi.Helpers;
 using ContentSvc.WebApi.Options;
 using ImageMagick;
 using Microsoft.AspNetCore.Mvc;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.Options;
 using System;
 using System.IO;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace ContentSvc.WebApi.Controllers
@@ -112,7 +114,10 @@ namespace ContentSvc.WebApi.Controllers
                         {
                             markImage.Alpha(AlphaOption.Set);
                         }
-                        markImage.Resize(width, height);
+                        if (width > 0 || height > 0)
+                        {
+                            markImage.Resize(width, height);
+                        }
                         markImage.Evaluate(Channels.Opacity, EvaluateOperator.Multiply, opacity);
                         if (x < 0) x += (image.Width - markImage.Width);
                         if (y < 0) y += (image.Height - markImage.Height);
@@ -124,12 +129,22 @@ namespace ContentSvc.WebApi.Controllers
                     if (fontSize == 0) fontSize = height;
                     using (var textImage = new MagickImage(MagickColors.White, width, height))
                     {
-                        textImage.Draw(
-                            new Drawables()
-                            .FillColor(MagickColors.Gray)
+                        var d = new Drawables()
+                            .FillColor(MagickColors.Gray);
+                        if (text.HasChinese())
+                        {
+                            d = d.TextEncoding(Encoding.UTF8)
+                                .Font("Microsoft YaHei & Microsoft YaHei UI");
+                            d = d.Text(width >> 1, (height + 0.68 * fontSize) / 2, text);
+                        }
+                        else
+                        {
+                            d = d.Text(width >> 1, (height + 0.72 * fontSize) / 2, text);
+                        }
+                        d = d.TextAntialias(true)
                             .FontPointSize(fontSize)
-                            .Text(width >> 1, (height + (int)(fontSize * 0.9)) >> 1, text)
-                            .TextAlignment(TextAlignment.Center));
+                            .TextAlignment(TextAlignment.Center);
+                        textImage.Draw(d);
                         textImage.Evaluate(Channels.Opacity, EvaluateOperator.Multiply, opacity);
                         if (x < 0) x += (image.Width - textImage.Width);
                         if (y < 0) y += (image.Height - textImage.Height);
