@@ -27,14 +27,26 @@ namespace ContentSvc.WebApi.Context
             // }
 
             modelBuilder.Entity<MinioUser>()
-            .HasOne(u => u.Service)
-            .WithMany(s => s.MinioUsers)
-            .HasForeignKey(u => u.ServiceId)
-            .OnDelete(DeleteBehavior.Cascade);
+                .HasOne(u => u.Service)
+                .WithMany(s => s.MinioUsers)
+                .HasForeignKey(u => u.ServiceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ApiKey>()
+                .HasIndex(k => k.Key)
+                .IsUnique(true);
+
+            modelBuilder.Entity<ApiKey>()
+                .HasOne(k => k.MinioUser)
+                .WithMany(u => u.ApiKeys)
+                .HasForeignKey(k => k.MinioUserId)
+                .OnDelete(DeleteBehavior.Cascade);
         }
 
         public DbSet<Service> Services { get; set; }
 
         public DbSet<MinioUser> MinioUsers { get; set; }
+
+        public DbSet<ApiKey> ApiKeys { get; set; }
     }
 }

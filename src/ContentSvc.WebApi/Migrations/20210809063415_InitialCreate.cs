@@ -29,13 +29,13 @@ namespace ContentSvc.WebApi.Migrations
                 name: "minio_users",
                 columns: table => new
                 {
-                    AccessKey = table.Column<string>(maxLength: 64, nullable: false),
+                    access_key = table.Column<string>(maxLength: 32, nullable: false),
                     secret_key = table.Column<string>(nullable: true),
                     service_id = table.Column<int>(nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("pk_minio_users", x => x.AccessKey);
+                    table.PrimaryKey("pk_minio_users", x => x.access_key);
                     table.ForeignKey(
                         name: "fk_minio_users_services_service_id",
                         column: x => x.service_id,
@@ -43,6 +43,40 @@ namespace ContentSvc.WebApi.Migrations
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateTable(
+                name: "api_keys",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(nullable: false),
+                    key = table.Column<string>(maxLength: 28, nullable: true),
+                    created_at = table.Column<DateTime>(nullable: false),
+                    expired_at = table.Column<DateTime>(nullable: true),
+                    role = table.Column<int>(nullable: false),
+                    minio_user_id = table.Column<string>(maxLength: 32, nullable: false),
+                    remarks = table.Column<string>(maxLength: 64, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_api_keys", x => x.id);
+                    table.ForeignKey(
+                        name: "fk_api_keys_minio_users_minio_user_id",
+                        column: x => x.minio_user_id,
+                        principalTable: "minio_users",
+                        principalColumn: "access_key",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_api_keys_key",
+                table: "api_keys",
+                column: "key",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ix_api_keys_minio_user_id",
+                table: "api_keys",
+                column: "minio_user_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_minio_users_service_id",
@@ -52,6 +86,9 @@ namespace ContentSvc.WebApi.Migrations
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "api_keys");
+
             migrationBuilder.DropTable(
                 name: "minio_users");
 

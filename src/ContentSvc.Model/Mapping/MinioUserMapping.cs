@@ -1,7 +1,4 @@
 using ContentSvc.Model.Entities;
-using System;
-using System.Collections.Generic;
-using System.Text;
 using DTO = ContentSvc.Model.Dto;
 
 namespace ContentSvc.Model.Mapping

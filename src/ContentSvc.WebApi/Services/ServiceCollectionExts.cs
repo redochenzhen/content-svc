@@ -1,6 +1,6 @@
 ﻿
 using ContentSvc.WebApi.Repositories;
-using ContentSvc.WebApi.Repositries.Interfaces;
+using ContentSvc.WebApi.Repositories.Interfaces;
 using ContentSvc.WebApi.Services;
 using ContentSvc.WebApi.Services.Interfaces;
 
@@ -13,6 +13,8 @@ namespace Microsoft.Extensions.DependencyInjection
             services
                 .AddScoped<IServiceRepository, ServiceRepository>()
                 .AddScoped<IMinioUserRepository, MinioUserRepository>()
+                .AddScoped<IApiKeyRepository, ApiKeyRepository>()
+                .AddSingleton<ITokenService, TokenService>()
                 .AddSingleton<IMcWrapper, McWrapper>();
         }
     }

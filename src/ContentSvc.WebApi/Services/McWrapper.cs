@@ -86,6 +86,7 @@ namespace ContentSvc.WebApi.Services
             string json = JsonSerializer.Serialize(policy, new JsonSerializerOptions { WriteIndented = true });
             File.WriteAllText(policyFilePath, json);
             AddPolicy(policyName, policyFilePath);
+            File.Delete(policyFilePath);
             return policyName;
         }
 

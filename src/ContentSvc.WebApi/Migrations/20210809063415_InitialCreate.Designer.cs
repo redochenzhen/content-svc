@@ -9,8 +9,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace ContentSvc.WebApi.Migrations
 {
     [DbContext(typeof(ContentSvcContext))]
-    [Migration("20210721102213_x1")]
-    partial class x1
+    [Migration("20210809063415_InitialCreate")]
+    partial class InitialCreate
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -19,12 +19,60 @@ namespace ContentSvc.WebApi.Migrations
                 .HasAnnotation("ProductVersion", "3.1.1")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
+            modelBuilder.Entity("ContentSvc.Model.Entities.ApiKey", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnName("id")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnName("created_at")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("ExpiredAt")
+                        .HasColumnName("expired_at")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Key")
+                        .HasColumnName("key")
+                        .HasColumnType("varchar(28) CHARACTER SET utf8mb4")
+                        .HasMaxLength(28);
+
+                    b.Property<string>("MinioUserId")
+                        .IsRequired()
+                        .HasColumnName("minio_user_id")
+                        .HasColumnType("varchar(32) CHARACTER SET utf8mb4")
+                        .HasMaxLength(32);
+
+                    b.Property<string>("Remarks")
+                        .HasColumnName("remarks")
+                        .HasColumnType("varchar(64) CHARACTER SET utf8mb4")
+                        .HasMaxLength(64);
+
+                    b.Property<int>("Role")
+                        .HasColumnName("role")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id")
+                        .HasName("pk_api_keys");
+
+                    b.HasIndex("Key")
+                        .IsUnique()
+                        .HasName("ix_api_keys_key");
+
+                    b.HasIndex("MinioUserId")
+                        .HasName("ix_api_keys_minio_user_id");
+
+                    b.ToTable("api_keys");
+                });
+
             modelBuilder.Entity("ContentSvc.Model.Entities.MinioUser", b =>
                 {
                     b.Property<string>("Id")
-                        .HasColumnName("AccessKey")
-                        .HasColumnType("varchar(64) CHARACTER SET utf8mb4")
-                        .HasMaxLength(64);
+                        .HasColumnName("access_key")
+                        .HasColumnType("varchar(32) CHARACTER SET utf8mb4")
+                        .HasMaxLength(32);
 
                     b.Property<string>("SecretKey")
                         .HasColumnName("secret_key")
@@ -76,6 +124,16 @@ namespace ContentSvc.WebApi.Migrations
                         .HasName("pk_services");
 
                     b.ToTable("services");
+                });
+
+            modelBuilder.Entity("ContentSvc.Model.Entities.ApiKey", b =>
+                {
+                    b.HasOne("ContentSvc.Model.Entities.MinioUser", "MinioUser")
+                        .WithMany("ApiKeys")
+                        .HasForeignKey("MinioUserId")
+                        .HasConstraintName("fk_api_keys_minio_users_minio_user_id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ContentSvc.Model.Entities.MinioUser", b =>

@@ -1,9 +1,9 @@
 ﻿using ContentSvc.Model.Entities;
+using System;
 
 namespace ContentSvc.WebApi.Repositories.Interfaces
 {
-    public interface IServiceRepository : IRepository<Service, int>
+    public interface IApiKeyRepository : IRepository<ApiKey, Guid>
     {
-        
     }
 }

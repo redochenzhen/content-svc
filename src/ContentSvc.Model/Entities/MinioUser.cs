@@ -8,8 +8,8 @@ namespace ContentSvc.Model.Entities
 {
     public class MinioUser : IEntity<string>
     {
-        [StringLength(64)]
-        [Column(nameof(AccessKey))]
+        [StringLength(32)]
+        [Column("access_key")]
         public string Id { get; set; }
 
         [NotMapped]
@@ -24,5 +24,7 @@ namespace ContentSvc.Model.Entities
         public int ServiceId { get; set; }
 
         public virtual Service Service { get; set; }
+
+        public virtual ICollection<ApiKey> ApiKeys { get; set; }
     }
 }

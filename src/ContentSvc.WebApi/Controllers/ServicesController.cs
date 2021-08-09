@@ -2,7 +2,7 @@
 using ContentSvc.Model.Mapping;
 using ContentSvc.WebApi.Context;
 using ContentSvc.WebApi.Options;
-using ContentSvc.WebApi.Repositries.Interfaces;
+using ContentSvc.WebApi.Repositories.Interfaces;
 using ContentSvc.WebApi.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -11,7 +11,6 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Threading.Tasks;
 
 namespace ContentSvc.WebApi.Controllers
@@ -24,6 +23,7 @@ namespace ContentSvc.WebApi.Controllers
         private readonly IServiceRepository _serviceRepository;
         private readonly IMinioUserRepository _minioUserRepository;
         private readonly MinioOptions _options;
+        private readonly ITokenService _tokenService;
         private readonly IMcWrapper _mc;
 
         public ServicesController(
@@ -31,12 +31,14 @@ namespace ContentSvc.WebApi.Controllers
             ContentSvcContext context,
             IServiceRepository serviceRepository,
             IMinioUserRepository minioUserRepository,
+            ITokenService tokenService,
             IMcWrapper mc)
         {
             _options = minioOptions.Value;
             _context = context;
             _serviceRepository = serviceRepository;
             _minioUserRepository = minioUserRepository;
+            _tokenService = tokenService;
             _mc = mc;
         }
 
@@ -45,14 +47,15 @@ namespace ContentSvc.WebApi.Controllers
         [ProducesResponseType(StatusCodes.Status409Conflict)]
         public async Task<IActionResult> CreateServiceAsync(Service serviceDto)
         {
+            var myId = _tokenService.GetMemberId(User);
             var now = DateTime.Now;
             var service = serviceDto.ToEntiry();
             service.CreatedDate = now;
-            //service.CreatorId = 0;
+            service.CreatorId = myId;
             var minioUserDto = new MinioUser
             {
                 AccessKey = service.Name,
-                SecretKey = GenerateSecretKey(),
+                SecretKey = _tokenService.GenerateRandomToken(20)
             };
             var minioUser = minioUserDto.ToEntiry();
             string accessKey = minioUser.AccessKey;
@@ -75,7 +78,6 @@ namespace ContentSvc.WebApi.Controllers
                     _minioUserRepository.Add(minioUser);
                     await _context.SaveChangesAsync();
                     await trans.CommitAsync();
-
                 }
                 catch (DbUpdateException)
                 {
@@ -84,6 +86,7 @@ namespace ContentSvc.WebApi.Controllers
                 }
             }
             serviceDto.Id = service.Id;
+            serviceDto.CreatorId = myId;
             serviceDto.MinioUsers = new List<MinioUser> { minioUserDto };
             serviceDto.PublicBaseUrl = _options.PublicBaseUrl;
             serviceDto.ConsoleUrl = _options.ConsoleUrl;
@@ -121,10 +124,14 @@ namespace ContentSvc.WebApi.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> RemoveServiceAsync(int id)
         {
-
+            var myId = _tokenService.GetMemberId(User);
             var service = await _serviceRepository.GetAsync(id);
             if (service != null)
             {
+                if (service.CreatorId != myId)
+                {
+                    return Forbid();
+                }
                 _serviceRepository.Remove(service);
                 await _context.SaveChangesAsync();
                 string accessKey = service.Name;
@@ -133,18 +140,25 @@ namespace ContentSvc.WebApi.Controllers
                 _mc.RemoveUser(accessKey);
                 _mc.ForceRemoveBucket(bucket);
             }
-
             return Ok();
         }
 
-        private string GenerateSecretKey()
+        [HttpGet("{id}/apikeys")]
+        public async Task<IActionResult> GetApiKeysAsync(int id)
         {
-            var randomNumber = new byte[16];
-            using (var rng = RandomNumberGenerator.Create())
+            bool existing = await _serviceRepository.ExistsAsync(id);
+            if (!existing)
             {
-                rng.GetBytes(randomNumber);
-                return Convert.ToBase64String(randomNumber);
+                return NotFound();
             }
+            var apiKeys = await _context.Services
+                .Include(s => s.MinioUsers)
+                .ThenInclude(u => u.ApiKeys)
+                .Where(s => s.Id == id)
+                .SelectMany(s => s.MinioUsers.SelectMany(u => u.ApiKeys))
+                .ToListAsync();
+            var apiKeyDtos = apiKeys.Select(k => k.ToDto()).ToList();
+            return Ok(apiKeyDtos);
         }
     }
 }

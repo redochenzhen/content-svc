@@ -1,10 +1,15 @@
 ﻿using ContentSvc.WebApi.ActionFilters;
 using ContentSvc.WebApi.Helpers;
 using ContentSvc.WebApi.Options;
+using ContentSvc.WebApi.Services.Interfaces;
 using ImageMagick;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Minio;
+using Minio.Exceptions;
 using System;
 using System.IO;
 using System.Net.Http;
@@ -20,50 +25,57 @@ namespace ContentSvc.WebApi.Controllers
         private readonly ILogger _logger;
         private readonly MinioOptions _options;
         private readonly IHttpClientFactory _clientFactory;
+        private readonly ITokenService _tokenService;
 
         public ImagesController(
             ILogger<ImagesController> logger,
             IOptions<MinioOptions> minioOptions,
-            IHttpClientFactory clientFactory)
+            IHttpClientFactory clientFactory,
+            ITokenService tokenService)
         {
             _logger = logger;
             _options = minioOptions.Value;
             _clientFactory = clientFactory;
+            _tokenService = tokenService;
         }
 
-        // [HttpPost("upload")]
-        // public async Task<IActionResult> UploadAsync(IFormFile file, string path)
-        // {
-        //     if (file == null) return BadRequest();
-        //     if (path == null) return BadRequest();
-        //     if (accessKey == null) return BadRequest();
-        //     if (secretKey == null) return BadRequest();
+        [Authorize(Roles = "WriteOnly,ReadWrite,Admin")]
+        [HttpPost("upload")]
+        public async Task<IActionResult> UploadAsync(IFormFile file, string dir, string fileName = null)
+        {
+            if (file == null) return BadRequest();
+            if (dir == null) return BadRequest();
 
-        //     if (!file.ContentType.ToLower().StartsWith("image"))
-        //     {
-        //         return new UnsupportedMediaTypeResult();
-        //     }
+            var minioUser = _tokenService.GetMinioUser(User);
+            var accessKey = minioUser.AccessKey;
+            var secretKey = minioUser.SecretKey;
 
-        //     var contentType = file.ContentType;
-        //     var bucket = accessKey;
-        //     var filePath = Path.Join(path, file.FileName).Replace("\\", "/");
+            var contentType = file.ContentType;
+            if (contentType == null || !contentType.StartsWith("image", StringComparison.OrdinalIgnoreCase))
+            {
+                return new UnsupportedMediaTypeResult();
+            }
 
-        //     try
-        //     {
-        //         var minio = new MinioClient(_options.Endpoint);
-        //         using (var stream = file.OpenReadStream())
-        //         {
-        //             await minio.PutObjectAsync(bucket, filePath, stream, file.Length, contentType);
-        //         }
-        //     }
-        //     catch (MinioException ex)
-        //     {
-        //         throw ex;
-        //     }
-        //     var fullPath = Path.Join(bucket, filePath).Replace("\\", "/");
-        //     return Created(new Uri(fullPath, UriKind.Relative), null);
-        // }
+            var bucket = accessKey;
+            var filePath = Path.Join(dir, fileName ?? file.FileName).Replace("\\", "/");
 
+            try
+            {
+                var minio = new MinioClient(_options.Endpoint, accessKey, secretKey);
+                using (var stream = file.OpenReadStream())
+                {
+                    await minio.PutObjectAsync(bucket, filePath, stream, file.Length, contentType);
+                }
+            }
+            catch (MinioException ex)
+            {
+                throw ex;
+            }
+            var fullPath = Path.Join(bucket, filePath).Replace("\\", "/");
+            return Created(new Uri(fullPath, UriKind.Relative), null);
+        }
+
+        [AllowAnonymous]
         [FilesETagFilter("targetPath", "iconPath")]
         [ResponseCache(Duration = 30)]
         [HttpGet("watermark")]
