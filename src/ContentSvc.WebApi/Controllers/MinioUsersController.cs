@@ -42,7 +42,7 @@ namespace ContentSvc.WebApi.Controllers
             apiKey.Id = Guid.NewGuid();
             apiKey.MinioUserId = id;
             apiKey.CreatedAt = DateTime.Now;
-            apiKey.Key = _tokenService.GenerateRandomToken(32);
+            apiKey.Key = _tokenService.GenerateRandomToken(28);
             _apiKeyRepository.Add(apiKey);
             await _context.SaveChangesAsync();
             apiKeyDto = apiKey.ToDto();
