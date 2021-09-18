@@ -5,7 +5,9 @@ def switcher
 pipeline {
   agent {
     node {
-      label 'in && centos && dotnetcore'
+      label (
+        env.BRANCH_NAME == 'production' ? 'out && dotnetcore' : "in && centos && dotnetcore"
+      )
     }
   }
   
