@@ -31,7 +31,7 @@ pipeline {
         script {
           //加载配置文件config.json
           switcher = config.init()
-          // gitlab.checkout()
+          gitlab.checkout()
           //向gitlab上报状态为pending
           gitlab.pend()
           //job.conflict()
