@@ -1,11 +1,15 @@
-﻿namespace ContentSvc.WebApi.Options
+﻿using System.Collections.Generic;
+using System.Linq;
+
+namespace ContentSvc.WebApi.Options
 {
     public class MinioOptions
     {
         public const string PREFIX = "MinIO";
 
         public string Alias { get; set; } = "minio-contentservice";
-        public string Endpoint { get; set; }
+        public string Endpoint => Endpoints?.FirstOrDefault();
+        public List<string> Endpoints { get; set; }
         public bool Secure { get; set; }
         public string AdminAccessKey { get; set; }
         public string AdminSecretKey { get; set; }

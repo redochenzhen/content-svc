@@ -89,7 +89,7 @@ namespace ContentSvc.WebApi.Controllers
             serviceDto.CreatorId = myId;
             serviceDto.MinioUsers = new List<MinioUser> { minioUserDto };
             serviceDto.PublicBaseUrl = _options.PublicBaseUrl;
-            serviceDto.Endpoint = _options.Endpoint;
+            serviceDto.Endpoints = _options.Endpoints ?? new List<string> { _options.Endpoint };
             serviceDto.ConsoleUrl = _options.ConsoleUrl;
             serviceDto.ApiBaseUrl = _options.ApiBaseUrl;
             return Created(new Uri($"/api/services/{service.Id}", UriKind.Relative), serviceDto);
@@ -107,7 +107,7 @@ namespace ContentSvc.WebApi.Controllers
                     var dto = svc.ToDto();
                     dto.PublicBaseUrl = _options.PublicBaseUrl;
                     dto.ConsoleUrl = _options.ConsoleUrl;
-                    dto.Endpoint = _options.Endpoint;
+                    dto.Endpoints = _options.Endpoints ?? new List<string> { _options.Endpoint };
                     dto.ApiBaseUrl = _options.ApiBaseUrl;
                     return dto;
                 })

@@ -14,7 +14,7 @@ namespace ContentSvc.Model.Dto
 
         public string PublicBaseUrl { get; set; }
         public string ConsoleUrl { get; set; }
-        public string Endpoint { get; set; }
+        public List<string> Endpoints { get; set; }
         public string ApiBaseUrl { get; set; }
     }
 }
