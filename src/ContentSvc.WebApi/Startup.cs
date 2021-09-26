@@ -171,12 +171,12 @@ namespace ContentSvc
                         .AllowCredentials());
             });
 
-            // #if !DEBUG
+#if !DEBUG
             services.AddDiscovery(options =>
             {
                 options.UseZooPicker();
             });
-            // #endif
+#endif
             var minio = Configuration.GetSection(MinioOptions.PREFIX).Get<MinioOptions>();
             services.AddHttpClient("minio", client =>
             {
@@ -193,7 +193,7 @@ namespace ContentSvc
         {
             JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
 #if !DEBUG
-            //if (env.IsDevelopment())
+            if (env.IsDevelopment())
 #endif
             {
                 app.UseDeveloperExceptionPage();
